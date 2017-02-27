@@ -1,0 +1,565 @@
+---
+title: "MSBD 5004 - Week 1-2"
+author: "zzq"
+date: "2017.02.16"
+output:
+  prettydoc::html_pretty:
+    css: style.css
+    highlight: null
+    theme: hpstr
+    toc: yes
+runtime: shiny
+---
+
+```{r, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(shiny)
+library(viridis)
+library(ggthemes)
+library(faraway)
+#library(plotly)
+
+
+```
+
+\  
+\  
+\  
+
+
+---
+
+---
+
+## 1. Fourier Series
+  
+**Fourier analysis** : Simple [sinusoids](https://en.wikipedia.org/wiki/Sine_wave) are the building blocks of the most complicated wave forms
+
+\  
+\  
+\  
+
+---  
+
+
+###  1.1. Periodicity 
+A function f(t) is periodic of period $T$ if there is a number $T>0$ such that
+$$f(t+T) = f(t),$$
+
+Is the sum of two periodic functions periodic? For instance, the following plot will show us the 
+condition of $f(t) = 2sin(a*t) + cos(b*t)$
+
+```{r, echo = FALSE}
+
+
+s = seq(-10,10,0.01)
+
+fluidPage(
+    fluidRow(
+        column(6,
+            sliderInput("a", label = "a Input",
+                        min = -10, max = 10, value = 10, step = 0.01 )
+            ),
+        column(6,    
+            sliderInput("b", label = "b Input",
+                        min = -10, max = 10, value = 9.5, step = 0.01 )
+        )
+    )    
+)
+
+s_active <- reactive({
+    2*sin(input$a*s)+cos(input$b*s)
+})
+
+plot_data <- reactive({
+    data.frame(list(s = s, s_active = s_active()))
+})
+
+renderPlot({
+    ggplot(data = plot_data(),aes(#color = s,
+                                  x = s, y = s_active)) +
+        geom_line() +
+        #scale_color_viridis(name = "t") +
+        xlab("t") +
+        ylab("f(t)")
+})
+
+
+```
+
+In this example, $f$ will be a periodic function only if $a/b$ is a rational fraction $(b \not = 0)$.   
+
+\  
+\  
+\  
+
+---  
+
+### 1.2. Building blocks
+
+Considering about the sinusoid functions: $$Asin(2\pi\nu+\phi),$$
+
+where $A$ is the Amplitude, $\nu$ is the frequency and $\phi$ is the phase.
+
+> **Theorem 1.1**: Any periodic function can be approximated by sinusoid.  
+
+>For instance:
+
+>$$cos(t) = sin(t + \frac{\pi}{2})$$  
+
+
+
+Noted that the amplitude term can be avoided:  
+
+$$
+\begin{align}
+s(t) &= Asin(2\pi\nu t + \phi)  \\
+     &= A[sin(2\pi\nu t)cos\phi + cos(2\pi\nu t)sin\phi] \\ 
+     &= asin(2\pi\nu t) + bcos(2\pi\nu t)  
+\end{align}
+$$  
+
+\  
+\  
+\  
+
+---
+
+
+### 1.3. Foundation of Fourier Analysis
+
+
+> **Thorem 1.2** Let f(t) be **1-periodic** and $$\int_{0}^{1}|f(t)|^2 \leq \infty, $$ 
+>then
+
+>$$f(t) = \frac{a_0}{2} + \sum_{n=1}^\infty[a_n\cos(2\pi nt)+b_n\sin(2\pi nt)] $$
+
+To calculate $a_n$ or $b_n$, we can calculate the $\int_0^1f(t)\cos(2\pi nt)dt$ or $\int_0^1f(t)\sin(2\pi nt)dt$. We can get following result based on the [orthogonality](https://en.wikipedia.org/wiki/Orthogonality#Orthogonal_functions) of this group of building blocks:
+
+$$ \left\{
+\begin{aligned}
+a_n & =  2\int_0^1f(t)\cos(2\pi nt)dt \\
+b_n & =  2\int_0^1f(t)\sin(2\pi nt)dt  \\
+a_0 & =  2\int_0^1f(t)dt
+\end{aligned}
+\right.
+$$
+
+
+\  
+\  
+\  
+
+---
+
+
+### 1.4. Introducing complex exponentials
+
+$$e^{i\theta} = \cos\theta + i\sin\theta $$
+
+Here we can express *Theorem 1.2* by [complex exponentials](https://en.wikipedia.org/wiki/Euler%27s_formula): 
+
+$$\begin{aligned}
+\cos(2\pi nt) &= \frac{1}{2}(e^{2\pi int} + e^{2\pi i(-n)t}) \\
+\sin(2\pi nt) &= \frac{1}{2i}(e^{2\pi int} + e^{2\pi i(-n)t}) \\ 
+\end{aligned}
+$$  
+
+Finaly we have  
+
+> **Theorem 1.3** Fourier Analysis
+>$$f(t) = \sum_{n = -\infty}^{\infty}C_ne^{2\pi int}$$
+  
+
+$Cn$ can be calculated similiarly based on the orthogonality:  
+
+$$C_n = \int_{0}^{1}f(t)e^{-2\pi int}dt$$
+
+For a T-perioic function $f(t)$, g(t) = f(Tt) will have period 1. 
+
+\  
+\  
+\  
+
+---  
+
+### 1.5. Some examples  
+
+Find the Fourior series of the following periodic function: 
+$$ f(t)=\left\{
+\begin{aligned}
+1&, N\leq t< N+1/2 \\
+-1&, N-1/2 \leq t< N
+\end{aligned}
+\right., N \in Z
+$$
+
+```{r,echo=F}
+eg1_t <- seq(-2.25,2.25,0.01)
+eg1_y <- eg1_t %/% 0.5 %% 2 == 0 %>%
+    as.numeric()
+eg1_y[eg1_y==0] <- -1
+
+eg1_data <- as.data.frame(cbind(eg1_t,eg1_y))
+
+ggplot(data = eg1_data, aes(x = eg1_t, y = eg1_y)) +
+    geom_line() +
+    xlab("t") +
+    ylab("f(t)")   
+
+```  
+
+This is a 1-Periodic function. Thus,
+$$
+\begin{aligned}
+C_n &= \int_{0}^{1}f(t)e^{-2\pi int}dt \\
+    &= \int_{0}^{1/2}f(t)e^{-2\pi int}dt + \int_{1/2}^{1}f(t)e^{-2\pi int}dt\\
+    &= \frac{1}{-2\pi in}e^{-2\pi int}|^{1/2}_{0} + \frac{1}{2\pi in}e^{-2\pi int}|^{1}_{1/2}\\
+    &= \frac{1}{-2\pi in}((-1)^n-1) + \frac{1}{2\pi in}(1-(-1)^n)\\
+    &= \frac{1}{\pi in}(1-(-1)^n)\\
+\end{aligned}
+$$
+
+Then we can write the Fourier series:  
+$$
+\begin{aligned}
+f(t) &= \sum_{n\ odd} \frac{2}{\pi in}e^{2\pi int}, \ n = 2k+1 \\
+     &= \sum_{k = -\infty}^{\infty}\frac{2}{\pi i(2k+1)}e^{2\pi i(2k+1)t}\\
+     &= \sum_{k = 0}^{\infty}\frac{4}{\pi i(2k+1)}\sin{2\pi (2k+1)t}
+\end{aligned}
+$$
+
+We can find something interesting if we let t=1/4:  
+
+$$
+1 - \frac{1}{3} + \frac{1}{5} - \frac{1}{7} + \frac{1}{9} - \frac{1}{11} + \cdots = \frac{\pi}{4}
+$$
+
+\  
+\  
+\  
+
+---  
+
+
+### 1.6. Gibbs phenomenon  
+
+We can observate the [Gibbs Oscillation phenomenon](https://en.wikipedia.org/wiki/Gibbs_phenomenon) by using this example:  
+
+```{r, echo = FALSE}
+
+
+gibbs_t = seq(-1.5,1.5,0.01)
+
+gibbs_y <- gibbs_t %/% 0.5 %% 2 == 0 %>%
+    as.numeric()
+
+gibbs_y[gibbs_y==0] <- -1
+
+f_nt = function(k,t){
+    4/(pi*(2*k+1))*sin(2*pi*(2*k+1)*t)
+}
+
+fluidPage(
+    fluidRow(
+        column(12,
+            sliderInput("k", label = "k Input",
+                        min = 0, max = 100, value = 10, step = 1 )
+        )
+    )    
+)
+
+gibbs_k <- reactive({
+    0:input$k
+})
+
+gibbs_y_F <- reactive({
+    gibbs_k() %>% 
+        sapply(f_nt, gibbs_t) %>% 
+        rowSums()
+})
+
+gibbs_data <- reactive({
+    data.frame(list(t = gibbs_t,  y = gibbs_y, y_Fourier = gibbs_y_F() ))
+})
+
+renderPlot({
+    ggplot(data = gibbs_data(),aes(#color = s,
+                                  x = t, y = y)) +
+        geom_line() +
+        geom_line(aes(x = t, y = y_Fourier),color = "blue") +
+        #scale_color_viridis(name = "t") +
+        xlab("t") +
+        ylab("f(t)") +
+        theme_few() 
+})
+
+
+```  
+
+> **The limitation of Fourier Analysis**: Not good to approximate a non-smooth function
+ 
+The sum of the infinite Fourier series will be equal to the f(t). But it works not very well for a discontinuous function when the k is finite, since the sum of finite continuous functions is still continuous. 
+
+\  
+\  
+\  
+
+---
+
+
+### 1.7. Some leftover stuff on Fourier Series
+
+Let f(t) be i-periodic function, then we can define the energy:  
+
+$$
+\int_{0}^{1}|f(t)|^2dt \\  
+f(t) = \sum_{n = -\infty}^{\infty}\hat{f}(n)e^{2\pi int}
+$$
+
+> **Theorem 1.4** $$\int_{0}^{1}|f(t)|^2dt = \sum_{n = -\infty}^{\infty}|\hat{f}(n)|^2 $$  
+>Proof Hint:
+$$
+\hat{f}(n)\hat{f}(m)\int_{0}^{1}e^{2\pi i(n-m)t}dt = \left\{\begin{aligned}
+1&, m = n \\
+0&, m \not=n 
+\end{aligned}
+\right. 
+$$
+
+\  
+\  
+\  
+\  
+\  
+\  
+
+---  
+
+---
+
+
+## 2. Fourier Transform
+Fourier transform is very similiar to Fourier series.  
+
+> **Theorem 2.1** Fourier Transform can be defined as:
+$$
+\hat{f}(s) = \int_{-\infty}^{\infty}f(t)e^{-2\pi ist}dt
+$$
+> where s can be any real number. It transfroms a time domain function to spectral domain
+
+The t、s can be regarded as "Time" and “Spectrum”  
+Also the Inverse Fourier transform:
+$$
+\check{g}(t) = \int_{-\infty}^{\infty}g(s)e^{2\pi its}ds
+$$
+Note: For a symmetric function $f(t)$, we have $\check{\hat{f}} = f$
+
+\  
+\  
+\  
+
+---  
+
+###  2.1. Some examples
+#### Example 1
+
+Find the Fourier transform of the following function:
+
+$$
+f(t)= \left\{\begin{aligned}
+1&, -\frac{1}{2} < t < \frac{1}{2} \\
+0&, otherwise 
+\end{aligned}
+\right. 
+$$
+
+The fourier transform process is shown as follows:
+
+$$
+\begin{aligned}
+\hat{f}(s) &= \int_{-\infty}^{\infty}f(t)e^{-2\pi ist}dt = \int_{-\frac{1}{2}}^{\frac{1}{2}}1\cdot e^{-2\pi ist}dt \\
+     &= \frac{e^{-2\pi ist}}{-2\pi is}\bracevert_{-\frac{1}{2}}^ {\frac{1}{2}}\\
+     &= \frac{1}{-2\pi is}(e^{-\pi is} - e^{\pi is})\\
+     &= \frac{sin(\pi s)}{\pi s}, \hspace{1cm} i.e. sinc\ function
+\end{aligned}
+$$
+
+\  
+\  
+\  
+
+#### Example 2  
+
+Find the Fourier transform of the following function:
+
+$$
+f(t) = e^{-at^2}, \hspace{1cm} a > 0 
+$$
+
+we can find that:
+
+$$
+\hat{f}(s) = \sqrt{\frac{\pi}{a}}e^{-\frac{\pi^2}{a}s^2}
+$$  
+Noticed that if $a = \pi$, then $\hat{f}(s) = f(s)$.  
+When $g(t)$ is the standarized normal distribution:  
+
+$$
+g(t) = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{t^2}{2\sigma^2}}, \hspace{0.5cm} then \\
+\hat{g}(s) = e^{-2\pi^2\sigma^2s^2}
+$$
+
+\  
+\  
+\  
+
+---
+
+
+### 2.2. Properties of Fourier transform 
+
+In order to get a better understand of Fourier transform, we introduce $\mathcal{F}$ to denote Fourier transform:
+$$
+\mathcal{F}(f(t)) = \hat{f}(s)\\
+\mathcal{F}^{-1}(g(s)) = \check{g}(t)
+$$
+
+1. Most important properties  
+    + Linearity
+    $$
+    \mathcal{F}(f_1(t) + f_2(t)) = \mathcal{F}(f_1(t)) + \mathcal{F}(f_2(t))
+    $$
+    $$
+    \mathcal{F}(af(t)) = a\mathcal{F}(f(t))
+    $$
+    
+    + Invertibility
+    $$
+    \mathcal{F}^{-1}(\mathcal{F}(f(t))) = f(t)
+    $$
+    $$
+    \mathcal{F}(\mathcal{F}^{-1}(g(s))) = g(s)
+    $$
+    
+    + The value at 0s：
+    $$
+    \hat{f}(0) = \int_{-\infty}^{\infty}f(t)dt
+    $$
+    $$
+    \check{g}(0) = \int_{-\infty}^{\infty}g(s)ds
+    $$
+    
+    + Isometry
+    $$
+    \int_{-\infty}^{\infty}|f(t)|^2dt = 
+    \int_{-\infty}^{\infty}|\hat{f}(s)|^2ds
+    $$
+    
+2. Other useful properties
+    + If $f(t)$ is real and symmetric, i.e. $f(-t) = f(t)$, then $\mathcal{F}(f(t))$ is a real function. On contrast, If $f(t)$ is real and anti-symmetric, i.e. $f(-t) = -f(t)$, then $\mathcal{F}(f(t))$ is imaginary.
+    
+    + Tricks on computation:
+    $$
+    \mathcal{F}(f(t+b)) = e^{2\pi isb}\hat{f}(s)
+    $$
+    $$
+    \mathcal{F}(f(at)) = \frac{1}{a}\hat{f}(\frac{s}{a})
+    $$
+    $$
+    \mathcal{F}(f(at+b)) = \frac{1}{a}e^{2\pi isb/a}\hat{f}(\frac{s}{a})
+    $$
+
+\  
+\  
+\  
+    
+---  
+
+---  
+
+
+## 3. Convolution
+> Let $f(t), g(t)$ be functions, define the convolution process as: $$ (f*g)(t) = \int_{-\infty}^{\infty}f(y)g(t-y)dy $$
+
+\  
+\  
+\  
+  
+---  
+
+
+### 3.1. A baby example
+
+Considering the moving average of f(t). The moving average can be described as:
+$$
+h(t) = \frac{1}{1}\int_{t-\frac{1}{2}}^{t+\frac{1}{2}}f(y)dy
+$$
+
+Here we define the moving window as indicator function: $g(t) = \textbf{1}_{[-\frac{1}{2},\frac{1}{2}]}(t)$, i.e.:
+$$
+g(t)= \left\{\begin{aligned}
+1&, -\frac{1}{2} < t < \frac{1}{2} \\
+0&, otherwise 
+\end{aligned}
+\right. 
+$$
+
+Then, 
+$$
+\begin{aligned}
+h(t) &= \int_{-\infty}^{\infty}f(y)\cdot \textbf{1}_{[t-\frac{1}{2},t+\frac{1}{2}]}(y)dy\\
+&= \int_{-\infty}^{\infty}f(y)g(t-y)dy
+\end{aligned}
+$$
+
+\  
+
+---  
+
+### 3.2. Some properties of convolution  
+
+
+1. $f*g = g*f$
+
++ Proof:
+  $$
+  (f*g)(t) = \int_{-\infty}^{\infty}f(y)g(t-y)dy
+  $$
+  let $z = t-y$, then $y = t-z$ and $dy = -dz$, then 
+  $$
+  \begin{aligned}
+  (f*g)(t) &= \int_{\infty}^{-\infty}f(t-z)g(z)d(-z)\\
+  &=\int_{-\infty}^{\infty}g(z)f(t-z)dz\\
+  &=g*f
+  \end{aligned}
+  $$
+
+2. $\mathcal{F}(f*g) = \mathcal{F}(f)\cdot\mathcal{F(g)}$
+
++ Proof:
+  $$
+  \begin{aligned}
+  \mathcal{F}(f*g) &= \mathcal{F}(\int_{-\infty}^{\infty}f(y)g(t-y)dy)\\
+  &= \int_{-\infty}^{\infty}e^{2\pi ist}(\int_{-\infty}^{\infty}f(y)g(t-y)dy)dt\\
+  &= \int_{-\infty}^{\infty}f(y)(\int_{-\infty}^{\infty}e^{2\pi ist}g(t-y)dt)dy\\
+  &= \int_{-\infty}^{\infty}f(y)(\hat{g}(s)e^{2\pi isy})dy\\
+  &= \hat{g}(s)\hat{f}(s)
+  \end{aligned}
+  $$
+
+\  
+
+\  
+
+---  
+
+---  
+
+**END**
+
+
+
+
+
